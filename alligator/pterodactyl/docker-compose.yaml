@@ -40,7 +40,7 @@ services:
     image: mariadb:10.5
     command: --default-authentication-plugin=mysql_native_password
     networks:
-      - ptero-backend
+      - backend
     volumes:
       - ./db:/var/lib/mysql
     environment:
@@ -52,7 +52,7 @@ services:
   cache:
     image: redis:alpine
     networks:
-      - ptero-backend
+      - backend
     restart: unless-stopped
 
   panel:
@@ -61,7 +61,7 @@ services:
       - database
       - cache
     networks:
-      - ptero-backend
+      - backend
       - proxy
     volumes:
       - ./var/:/app/var/
@@ -91,7 +91,7 @@ services:
     restart: unless-stopped
 
 networks:
-  ptero-backend:
+  backend:
     external: false
     ipam:
       config:
