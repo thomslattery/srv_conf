@@ -1,0 +1,16 @@
+version: "2.1"
+
+services:
+  plex-meta-manager:
+    image: meisnate12/plex-meta-manager
+    container_name: plex-meta-manager
+    environment:
+      - PMM_RUN=true
+      #- PMM_CONFIG=/config/special-config.yml
+      #- PMM_OVERLAYS_ONLY=true
+      #- PMM_RUN_LIBRARIES=Movies
+      - TZ=America/New_York
+    volumes:
+      - ./config:/config
+    restart: unless-stopped
+
