@@ -1,5 +1,3 @@
-version: "3.7"  
-
 # Common environment values
 x-environment: &default-env
   TZ: $TZ
