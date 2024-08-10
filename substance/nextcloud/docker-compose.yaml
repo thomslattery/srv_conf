@@ -20,10 +20,8 @@ services:
   mariadb:
     << : *default-keys
     image: mariadb:11
-    container_name: nextcloud-db
     networks:
-      - nextcloud-backend
-    volumes:
+      - backend
       - $BASE_DIR/db:/var/lib/mysql
       - $TZ_MOUNT
     secrets:
@@ -40,9 +38,8 @@ services:
   redis:
     << : *default-keys
     image: redis:alpine
-    container_name: nextcloud-redis
     networks:
-      - nextcloud-backend
+      - backend
     volumes:
       - $TZ_MOUNT
     environment:
@@ -52,10 +49,9 @@ services:
   nextcloud:
     << : *default-keys
     image: nextcloud:28
-    container_name: nextcloud-app
     networks:
       - web-proxy
-      - nextcloud-backend
+      - backend
     depends_on:
       - mariadb
       - redis
@@ -70,9 +66,9 @@ services:
       - db_password
     environment:
       << : *default-env
-      REDIS_HOST: nextcloud-redis
+      REDIS_HOST: redis
       REDIS_HOST_PASSWORD: $REDIS_PASSWORD
-      MYSQL_HOST: nextcloud-db
+      MYSQL_HOST: mariadb
       MYSQL_USER: nextcloud
       MYSQL_DATABASE: nextcloud
       MYSQL_PASSWORD_FILE: /run/secrets/db_password
@@ -95,7 +91,12 @@ services:
       - "traefik.http.routers.nextcloud.middlewares=nc-rep,nc-header"
 
 networks:
-  nextcloud-backend:
+  backend:
+    ipam:
+      config:
+        - subnet: 10.9.10.0/24
+          gateway: 10.9.10.1
+
   web-proxy:
     external: true
 
