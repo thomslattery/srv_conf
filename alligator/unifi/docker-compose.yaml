@@ -1,0 +1,22 @@
+---
+version: "2.1"
+services:
+  unifi-controller:
+    image: linuxserver/unifi-controller
+    container_name: unifi
+    ports:
+      - '3478:3478/udp'
+      - '10001:10001/udp'
+      - '6789:6789/tcp'
+      - '8080:8080/tcp'
+      - '8880:8880/tcp'
+      - '8443:8443/tcp'
+      - '8843:8843/tcp'
+    environment:
+      - PUID=1000
+      - PGID=1000
+      #- MEM_LIMIT=1024M #optional
+    volumes:
+      - './config:/config'
+      - '/etc/localtime:/etc/localtime:ro'
+    restart: unless-stopped
