@@ -14,7 +14,7 @@ x-common-keys: &default-keys
     - no-new-privileges:true
   restart: unless-stopped
 
-
+# Web Proxy Docker Containers
 services:
   traefik:
     << : *default-keys
@@ -27,7 +27,7 @@ services:
       - --accessLog=true
       - --accessLog.filePath=/traefik.log
       - --accessLog.bufferingSize=100
-      - --accessLog.filters.statusCodes=400-499
+      #- --accessLog.filters.statusCodes=400-499
       # Docker connectivity
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
@@ -44,7 +44,6 @@ services:
       - --certificatesresolvers.letsencrypt-do.acme.dnschallenge.delaybeforecheck=0
       - --certificatesresolvers.letsencrypt-do.acme.email=${EMAIL}
       - --certificatesresolvers.letsencrypt-do.acme.storage=/letsencrypt/acme.json
-      - no-new-privileges:true
     ports:
       - "80:80"
       - "443:443"
@@ -54,8 +53,8 @@ services:
     labels:
       - traefik.enable=true
       # HTTP-to-HTTPS Redirect
-      - traefik.http.routers.http-catchall.entrypoints=web
       - traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)
+      - traefik.http.routers.http-catchall.entrypoints=web
       - traefik.http.routers.http-catchall.middlewares=redirect-to-https
       - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
       # Traefik Dashboard
@@ -63,23 +62,18 @@ services:
       - traefik.http.routers.traefik-secure.entrypoints=websecure
       - traefik.http.routers.traefik-secure.tls=true
       - traefik.http.routers.traefik-secure.tls.certresolver=letsencrypt-do
-      #- traefik.http.routers.traefik-secure.tls.domains[0].main=${DOMAINNAME}
-      #- traefik.http.routers.traefik-secure.tls.domains[0].sans=*.${DOMAINNAME}
       ## Services - API
       - traefik.http.routers.traefik-secure.service=api@internal
       - traefik.http.routers.traefik-secure.middlewares=traefik-auth
       - traefik.http.middlewares.traefik-auth.basicauth.users=${BASIC_AUTH}
-      - traefik.http.middlewares.internal-ips.ipwhitelist.sourcerange=192.168.9.0/24
     volumes:
-      # - ${DATA}/traefik/traefik.toml:/traefik.toml
-      # - ${DATA}/traefik/traefik_dynamic.toml:/traefik_dynamic.toml
-      # - ${DATA}/traefik/rules:/rules
       - $DOCKER_DIR/traefik/traefik.log:/traefik.log 
       - $DOCKER_DIR/letsencrypt:/letsencrypt
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - $TZ_MOUNT
 
   whoami:
+    << : *default-keys
     image: traefik/whoami
     container_name: whoami
     labels:
@@ -90,10 +84,9 @@ services:
       - traefik.http.routers.whoami.tls.certresolver=letsencrypt-do
 
   nginx-demo:
+    << : *default-keys
     image: nginx
     container_name: nginx-demo
-    #volumes:
-    #  - ./src:/usr/share/nginx/html
     labels:
       - traefik.enable=true
       - traefik.http.routers.web-demo.rule=Host(`web.${DOMAINNAME}`)
