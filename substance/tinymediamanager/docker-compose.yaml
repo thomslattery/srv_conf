@@ -1,0 +1,40 @@
+version: "3.7"
+
+# Environment variables
+x-environment: &default-env
+  TZ: $TZ
+  PUID: $PUID
+  PGID: $PGID
+  
+# Default keys
+x-common-keys: &default-keys
+  restart: unless-stopped
+
+# Plex and related services
+services:
+  tinymediamanager:
+    << : *default-keys
+    image: tinymediamanager/tinymediamanager:latest
+    container_name: tinymediamanager
+    environment:
+      - USER_ID:$PUID
+      - GROUP_ID:$PGID
+    ports:
+      - 4000:4000
+      - 5900:5900
+    volumes:
+      - ./data:/data
+      - ./app/addons:/app/addons
+      - ./app/launcher-extra.yml:/app/launcher-extra.yml
+      - $MEDIA_MOUNT
+#    labels:
+#      - traefik.enable=true
+#      - traefik.http.routers.tmm.entrypoints=websecure
+#      - traefik.http.routers.tmm.tls.certresolver=letsencrypt-do
+#      - traefik.http.routers.tmm.rule=Host(`tmm.${DOMAINNAME}`)
+#      - traefik.http.services.tmm.loadbalancer.server.port=4000
+
+networks:
+  web-proxy:
+    external: true
+
