@@ -49,6 +49,21 @@ services:
       MYSQL_USER: "pterodactyl"
     restart: unless-stopped
 
+  adminer:
+    image: adminer
+    networks:
+      - backend
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.ptero_adminer.rule=Host(`ptero-db.${DOMAINNAME}`)
+      - traefik.http.routers.ptero_adminer.entrypoints=websecure
+      - traefik.http.routers.ptero_adminer.tls=true
+      - traefik.http.routers.ptero_adminer.tls.certresolver=letsencrypt-do
+      - traefik.http.routers.ptero_adminer.service=ptero_adminer-svc
+      - traefik.http.services.ptero_adminer-svc.loadbalancer.server.port=8080
+    restart: unless-stopped
+      
   cache:
     image: redis:alpine
     networks:
