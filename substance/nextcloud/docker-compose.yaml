@@ -1,0 +1,103 @@
+version: "3.7"  
+
+# Common environment values
+x-environment: &default-env
+  TZ: $TZ
+  PUID: $PUID
+  PGID: $PGID
+
+# Common keys
+x-common-keys: &default-keys
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
+secrets:
+  db_password:
+    file: $SECRETS_DIR/db_password
+  db_root_password:
+    file: $SECRETS_DIR/db_root_password
+
+services:
+  mariadb:
+    << : *default-keys
+    image: mariadb:11
+    container_name: nextcloud-db
+    networks:
+      - nextcloud-backend
+    volumes:
+      - $BASE_DIR/db:/var/lib/mysql
+      - $TZ_MOUNT
+    secrets:
+      - db_root_password
+      - db_password
+    environment:
+      << : *default-env
+      MYSQL_USER: nextcloud
+      MYSQL_DATABASE: nextcloud
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+    command: --transaction-isolation=READ-COMMITTED --log-bin=ROW --skip-innodb-read-only-compressed
+
+  redis:
+    << : *default-keys
+    image: redis:alpine
+    container_name: nextcloud-redis
+    networks:
+      - nextcloud-backend
+    volumes:
+      - $TZ_MOUNT
+    environment:
+      << : *default-env
+    command: redis-server --requirepass $REDIS_PASSWORD
+
+  nextcloud:
+    << : *default-keys
+    image: nextcloud:28
+    container_name: nextcloud-app
+    networks:
+      - web-proxy
+      - nextcloud-backend
+    depends_on:
+      - mariadb
+      - redis
+    volumes:
+      - $BASE_DIR/app/html:/var/www/html
+      - $BASE_DIR/app/config:/var/www/html/config
+      - $BASE_DIR/app/custom_apps:/var/www/html/custom_apps
+      - $BASE_DIR/app/themes:/var/www/html/themes
+      - $NEXTCLOUD_DATA:/data/nextcloud
+      - $TZ_MOUNT
+    secrets:
+      - db_password
+    environment:
+      << : *default-env
+      REDIS_HOST: nextcloud-redis
+      REDIS_HOST_PASSWORD: $REDIS_PASSWORD
+      MYSQL_HOST: nextcloud-db
+      MYSQL_USER: nextcloud
+      MYSQL_DATABASE: nextcloud
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+      NEXTCLOUD_DATA_DIR: /data/nextcloud
+      NEXTCLOUD_TRUSTED_DOMAIN: cloud.$DOMAINNAME
+      TRUSTED_PROXIES: $NETWORK
+    labels:
+      - traefik.enable=true
+      ## HTTPS Routers
+      - traefik.http.routers.nextcloud.rule=Host(`cloud.${DOMAINNAME}`)
+      - traefik.http.routers.nextcloud.entrypoints=websecure
+      - traefik.http.routers.nextcloud.tls=true
+      - traefik.http.routers.nextcloud.tls.certresolver=letsencrypt-do
+      ## Middlewares for Nextcloud rewrites and headers
+      - "traefik.http.middlewares.nc-rep.redirectregex.regex=https://(.*)/.well-known/(card|cal)dav"
+      - "traefik.http.middlewares.nc-rep.redirectregex.replacement=https://$$1/remote.php/dav/"
+      - "traefik.http.middlewares.nc-rep.redirectregex.permanent=true"
+      - "traefik.http.middlewares.nc-header.headers.customFrameOptionsValue=SAMEORIGIN"
+      - "traefik.http.middlewares.nc-header.headers.customResponseHeaders.Strict-Transport-Security=15552000"
+      - "traefik.http.routers.nextcloud.middlewares=nc-rep,nc-header"
+
+networks:
+  nextcloud-backend:
+  web-proxy:
+    external: true
+
