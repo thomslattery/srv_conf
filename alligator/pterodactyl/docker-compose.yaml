@@ -1,0 +1,101 @@
+x-common:
+
+  database:
+    &db-environment
+    # Do not remove the "&db-password" from the end of the line below, it is important
+    # for Panel functionality.
+    MYSQL_PASSWORD: &db-password ${DB_PW}
+    MYSQL_ROOT_PASSWORD: ${DB_ROOT_PW}
+
+  panel:
+    &panel-environment
+    APP_URL: "https://ptero-panel.neverhood.space"
+    # A list of valid timezones can be found here: http://php.net/manual/en/timezones.php
+    APP_TIMEZONE: "America/New_York"
+    APP_SERVICE_AUTHOR: "noreply@neverhood.space"
+    # Uncomment the line below and set to a non-empty value if you want to use Let's Encrypt
+    # to generate an SSL certificate for the Panel.
+    # LE_EMAIL: ""
+
+  mail:
+    &mail-environment
+    MAIL_FROM: "noreply@neverhood.space"
+    MAIL_DRIVER: "smtp"
+    MAIL_HOST: "smtp.fastmail.com"
+    MAIL_PORT: "465"
+    MAIL_USERNAME: ${MAIL_UN}
+    MAIL_PASSWORD: ${MAIL_PW}
+    MAIL_ENCRYPTION: "true"
+
+#
+# ------------------------------------------------------------------------------------------
+# DANGER ZONE BELOW
+#
+# The remainder of this file likely does not need to be changed. Please only make modifications
+# below if you understand what you are doing.
+#
+services:
+
+  database:
+    image: mariadb:10.5
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - ptero-backend
+    volumes:
+      - ./db:/var/lib/mysql
+    environment:
+      <<: *db-environment
+      MYSQL_DATABASE: "panel"
+      MYSQL_USER: "pterodactyl"
+    restart: unless-stopped
+
+  cache:
+    image: redis:alpine
+    networks:
+      - ptero-backend
+    restart: unless-stopped
+
+  panel:
+    image: ghcr.io/pterodactyl/panel:latest
+    links:
+      - database
+      - cache
+    networks:
+      - ptero-backend
+      - proxy
+    volumes:
+      - ./var/:/app/var/
+      - ./nginx/:/etc/nginx/http.d/
+      - ./logs/:/app/storage/logs
+    environment:
+      <<: [*panel-environment, *mail-environment]
+      DB_PASSWORD: *db-password
+      APP_ENV: "production"
+      APP_ENVIRONMENT_ONLY: "false"
+      CACHE_DRIVER: "redis"
+      SESSION_DRIVER: "redis"
+      QUEUE_DRIVER: "redis"
+      REDIS_HOST: "cache"
+      DB_HOST: "database"
+      DB_PORT: "3306"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.pterodactyl.rule=Host(`ptero-panel.${DOMAINNAME}`)
+      - traefik.http.routers.pterodactyl.entrypoints=websecure
+      - traefik.http.routers.pterodactyl.tls=true
+      - traefik.http.routers.pterodactyl.tls.certresolver=letsencrypt-do
+      - traefik.http.routers.pterodactyl.service=pterodactyl-svc
+      - traefik.http.services.pterodactyl-svc.loadbalancer.server.port=80
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+networks:
+  ptero-backend:
+    external: false
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  proxy:
+    external: true
+
