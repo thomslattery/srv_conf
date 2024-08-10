@@ -1,0 +1,83 @@
+# Web Proxy Docker Containers
+services:
+  traefik:
+    image: traefik
+    command:
+      # Logging
+      - --log=true
+      - --log.filePath=/logs/traefik.log
+      - --log.level=DEBUG
+      - --accessLog=true
+      - --accessLog.filePath=/logs/access.log
+      - --accessLog.bufferingSize=100
+      - --accessLog.filters.statusCodes=204-299,400-499,500-599
+      # Docker connectivity
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=proxy
+      # Dynamic rules in files
+      - --providers.file.directory=/rules
+      - --providers.file.watch=true
+      # Entrypoints - pi.hole is using 80
+      - --entrypoints.websecure.address=:443
+      # Enable dashboard
+      - --api=true
+      - --api.dashboard=true
+      # Let's Encrypt certificate resolver
+      - --certificatesresolvers.letsencrypt-do.acme.dnschallenge=true
+      - --certificatesresolvers.letsencrypt-do.acme.dnschallenge.provider=digitalocean
+      - --certificatesresolvers.letsencrypt-do.acme.dnschallenge.delaybeforecheck=0
+      - --certificatesresolvers.letsencrypt-do.acme.email=${EMAIL}
+      - --certificatesresolvers.letsencrypt-do.acme.storage=/letsencrypt/acme.json
+    volumes:
+      - ./rules:/rules
+      - ./logs:/logs
+      - ./letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - proxy
+    ports:
+      #- "80:80"
+      - "443:443"
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+      - DO_AUTH_TOKEN=${DO_AUTH_TOKEN}
+    labels:
+      - traefik.enable=true
+      # Traefik Dashboard
+      - traefik.http.routers.traefik-secure.rule=Host(`alligator-proxy.${DOMAINNAME}`)
+      - traefik.http.routers.traefik-secure.entrypoints=websecure
+      - traefik.http.routers.traefik-secure.tls=true
+      - traefik.http.routers.traefik-secure.tls.certresolver=letsencrypt-do
+      ## Services - API
+      - traefik.http.routers.traefik-secure.service=api@internal
+      - traefik.http.routers.traefik-secure.middlewares=traefik-auth
+      - traefik.http.middlewares.traefik-auth.basicauth.users=${BASIC_AUTH}
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  whoami:
+    image: traefik/whoami
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/New_York
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.whoami.rule=Host(`alligator.${DOMAINNAME}`)
+      - traefik.http.routers.whoami.entrypoints=websecure
+      - traefik.http.routers.whoami.tls=true
+      - traefik.http.routers.whoami.tls.certresolver=letsencrypt-do
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+networks:
+  proxy:
+    external: true
+

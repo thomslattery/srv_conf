@@ -1,22 +1,41 @@
----
-version: "2.1"
 services:
   unifi-controller:
-    image: linuxserver/unifi-controller
-    container_name: unifi
-    ports:
-      - '3478:3478/udp'
-      - '10001:10001/udp'
-      - '6789:6789/tcp'
-      - '8080:8080/tcp'
-      - '8880:8880/tcp'
-      - '8443:8443/tcp'
-      - '8843:8843/tcp'
+    image: lscr.io/linuxserver/unifi-controller:latest
+    container_name: unifi-controller
     environment:
       - PUID=1000
       - PGID=1000
-      #- MEM_LIMIT=1024M #optional
+      - TZ=Etc/UTC
+      - MEM_LIMIT=1024 #optional
+      - MEM_STARTUP=1024 #optional
     volumes:
-      - './config:/config'
-      - '/etc/localtime:/etc/localtime:ro'
+      - ./config:/config
+    ports:
+      - 3478:3478/udp
+      - 10001:10001/udp
+      - 8080:8080
+    #  - 1900:1900/udp #optional
+    #  - 8843:8843 #optional
+    #  - 8880:8880 #optional
+    #  - 6789:6789 #optional
+    #  - 5514:5514/udp #optional
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.unifi.rule=Host(`unifi.${DOMAINNAME}`)
+      - traefik.http.routers.unifi.entrypoints=websecure
+      - traefik.http.routers.unifi.tls=true
+      - traefik.http.routers.unifi.tls.certresolver=letsencrypt-do
+      - traefik.http.routers.unifi.service=unifi-svc
+      - traefik.http.services.unifi-svc.loadbalancer.server.port=8443
+      - traefik.http.services.unifi-svc.loadbalancer.serverstransport=NoCertCheck@file
+      - traefik.http.services.unifi-svc.loadbalancer.server.scheme=https
+    security_opt:
+      - no-new-privileges:true
     restart: unless-stopped
+
+networks:
+  proxy:
+    external: true
+
