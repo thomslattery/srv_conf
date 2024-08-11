@@ -1,21 +1,21 @@
 x-common:
+  # Common environment values
+  x-environment: 
+    &default-env
+    TZ: $TZ
+    PUID: $PUID
+    PGID: $PGID
 
   database:
     &db-environment
-    # Do not remove the "&db-password" from the end of the line below, it is important
-    # for Panel functionality.
     MYSQL_PASSWORD: &db-password ${DB_PW}
     MYSQL_ROOT_PASSWORD: ${DB_ROOT_PW}
 
   panel:
     &panel-environment
     APP_URL: "https://ptero-panel.neverhood.space"
-    # A list of valid timezones can be found here: http://php.net/manual/en/timezones.php
-    APP_TIMEZONE: "America/New_York"
+    APP_TIMEZONE: ${TZ}
     APP_SERVICE_AUTHOR: "noreply@neverhood.space"
-    # Uncomment the line below and set to a non-empty value if you want to use Let's Encrypt
-    # to generate an SSL certificate for the Panel.
-    # LE_EMAIL: ""
 
   mail:
     &mail-environment
@@ -44,7 +44,7 @@ services:
     volumes:
       - ./db:/var/lib/mysql
     environment:
-      <<: *db-environment
+      <<: [*default-env, *db-environment]
       MYSQL_DATABASE: "panel"
       MYSQL_USER: "pterodactyl"
     restart: unless-stopped
@@ -54,6 +54,8 @@ services:
     networks:
       - backend
       - proxy
+    environment:
+      <<: *default-env
     labels:
       - traefik.enable=true
       - traefik.http.routers.ptero_adminer.rule=Host(`ptero-db.${DOMAINNAME}`)
@@ -68,6 +70,8 @@ services:
     image: redis:alpine
     networks:
       - backend
+    environment:
+      <<: *default-env
     restart: unless-stopped
 
   panel:
@@ -78,12 +82,16 @@ services:
     networks:
       - backend
       - proxy
+    dns:
+      - 192.168.9.9
+      - 192.168.9.254
     volumes:
-      - ./var/:/app/var/
-      - ./nginx/:/etc/nginx/http.d/
-      - ./logs/:/app/storage/logs
+      - ./var:/app/var
+      - ./nginx:/etc/nginx/http.d
+      - ./logs:/app/storage/logs
+      - ${TZ_MOUNT}
     environment:
-      <<: [*panel-environment, *mail-environment]
+      <<: [*default-env, *panel-environment, *mail-environment]
       DB_PASSWORD: *db-password
       APP_ENV: "production"
       APP_ENVIRONMENT_ONLY: "false"
@@ -95,20 +103,23 @@ services:
       DB_PORT: "3306"
     labels:
       - traefik.enable=true
-      - traefik.http.routers.pterodactyl.rule=Host(`ptero-panel.${DOMAINNAME}`)
-      - traefik.http.routers.pterodactyl.entrypoints=websecure
-      - traefik.http.routers.pterodactyl.tls=true
-      - traefik.http.routers.pterodactyl.tls.certresolver=letsencrypt-do
-      - traefik.http.routers.pterodactyl.service=pterodactyl-svc
-      - traefik.http.services.pterodactyl-svc.loadbalancer.server.port=80
+      - traefik.http.routers.ptero_panel.rule=Host(`ptero-panel.${DOMAINNAME}`)
+      - traefik.http.routers.ptero_panel.entrypoints=websecure
+      - traefik.http.routers.ptero_panel.tls=true
+      - traefik.http.routers.ptero_panel.tls.certresolver=letsencrypt-do
+      - traefik.http.routers.ptero_panel.service=ptero_panel-svc
+      - traefik.http.services.ptero_panel-svc.loadbalancer.server.port=80
     restart: unless-stopped
 
 networks:
+
   backend:
     external: false
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 10.9.20.0/24
+          gateway: 10.9.20.1
+
   proxy:
     external: true
 
