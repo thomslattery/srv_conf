@@ -19,7 +19,7 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/var/lib/docker/containers/:/var/lib/docker/containers/"
       - "./etc/:/etc/pterodactyl/"
-      - "./lib/:/var/lib/pterodactyl/"
+      - "./lib/:/srv/pterodactyl/lib/"
       - "./log/:/var/log/pterodactyl/"
       - "/tmp/pterodactyl/:/tmp/pterodactyl/"
       - "/etc/ssl/certs:/etc/ssl/certs:ro"
