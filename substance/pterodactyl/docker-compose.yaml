@@ -34,7 +34,7 @@ services:
      - traefik.http.routers.pterodactyl.tls=true
      - traefik.http.routers.pterodactyl.tls.certresolver=letsencrypt-do
      - traefik.http.routers.pterodactyl.service=pterodactyl-svc
-     - traefik.http.services.pterodactyl-svc.loadbalancer.server.port=8080
+     - traefik.http.services.pterodactyl-svc.loadbalancer.server.port=443
     restart: unless-stopped
 
 networks:
