@@ -4,6 +4,9 @@ services:
     networks:
       - backend
       - web-proxy
+    dns:
+      - 192.168.9.9
+      - 192.168.9.254
     restart: unless-stopped
     image: bbilly1/tubearchivist
     volumes:
