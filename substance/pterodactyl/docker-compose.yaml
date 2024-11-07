@@ -19,7 +19,7 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "/var/lib/docker/containers/:/var/lib/docker/containers/"
       - "./etc/:/etc/pterodactyl/"
-      - "./lib/:/var/lib/pterodactyl/"
+      - "./lib/:/srv/pterodactyl/lib/"
       - "./log/:/var/log/pterodactyl/"
       - "/tmp/pterodactyl/:/tmp/pterodactyl/"
       - "/etc/ssl/certs:/etc/ssl/certs:ro"
@@ -34,18 +34,21 @@ services:
      - traefik.http.routers.pterodactyl.tls=true
      - traefik.http.routers.pterodactyl.tls.certresolver=letsencrypt-do
      - traefik.http.routers.pterodactyl.service=pterodactyl-svc
-     - traefik.http.services.pterodactyl-svc.loadbalancer.server.port=8080
+     - traefik.http.services.pterodactyl-svc.loadbalancer.server.port=443
     restart: unless-stopped
 
 networks:
+
   wings0:
     name: wings0
     external: false
     driver: bridge
     ipam:
       config:
-        - subnet: "172.21.0.0/16"
+        - subnet: 10.9.21.0/24
+          gateway: 10.9.21.1
     driver_opts:
       com.docker.network.bridge.name: wings0
+
   web-proxy:
     external: true
