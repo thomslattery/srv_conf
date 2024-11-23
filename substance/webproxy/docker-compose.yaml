@@ -1,8 +1,8 @@
 # Common environment values
 x-environment: &default-env
-  TZ: $TZ
   PUID: $PUID
   PGID: $PGID
+  TZ: $TZ
 
 # Common keys
 x-common-keys: &default-keys
@@ -42,6 +42,9 @@ services:
       - --certificatesresolvers.letsencrypt-do.acme.dnschallenge.delaybeforecheck=0
       - --certificatesresolvers.letsencrypt-do.acme.email=${EMAIL}
       - --certificatesresolvers.letsencrypt-do.acme.storage=/letsencrypt/acme.json
+    dns:
+      - "192.168.9.9"
+      - "192.168.9.254"
     ports:
       - "80:80"
       - "443:443"
@@ -65,10 +68,10 @@ services:
       - traefik.http.routers.traefik-secure.middlewares=traefik-auth
       - traefik.http.middlewares.traefik-auth.basicauth.users=${BASIC_AUTH}
     volumes:
-      - $DOCKER_DIR/traefik/traefik.log:/traefik.log 
-      - $DOCKER_DIR/letsencrypt:/letsencrypt
+      - ./traefik/traefik.log:/traefik.log 
+      - ./letsencrypt:/letsencrypt
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - $TZ_MOUNT
+      - $TZ_VOL
 
   whoami:
     << : *default-keys
