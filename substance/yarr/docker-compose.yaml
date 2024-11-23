@@ -1,4 +1,10 @@
+# Common environment values
+x-environment: &default-env
+  - PUID=${PUID}
+  - PGID=${PGID}
+  - TZ=${TZ}
 
+# YARR! Service Ahoy!
 services:
 
   gluetun:
@@ -8,12 +14,6 @@ services:
     networks:
       - web-proxy
     ports:
-      #- 6767:6767/tcp # bazarr
-      #- 7878:7878/tcp # radarr
-      #- 8989:8989/tcp # sonarr
-      #- 6881:6881     # qbittorrent
-      #- 6881:6881/udp # qbittorrent
-      #- 9100:6789/tcp # nzbget
       - 9091:9091/tcp # transmission
     environment:
       - VPN_SERVICE_PROVIDER=private internet access
@@ -22,23 +22,39 @@ services:
       - SERVER_REGION=${PIA_REGION}
       - VPN_PORT_FORWARDING=on
       - VPN_PORT_FORWARDING_STATUS_FILE=/gluetun/forwarded_port
-    labels:
+    labels: 
       - traefik.enable=true
+      # NZBGet
+      - traefik.http.routers.nzbget.entrypoints=websecure
+      - traefik.http.routers.nzbget.tls.certresolver=letsencrypt-do
+      - traefik.http.routers.nzbget.rule=Host(`nzbget.${DOMAINNAME}`)
+      - traefik.http.routers.nzbget.service=nzbget-svc
+      - traefik.http.services.nzbget-svc.loadbalancer.server.port=6789
+      # qBittorrent
+      - traefik.http.routers.qbit.entrypoints=websecure
+      - traefik.http.routers.qbit.tls.certresolver=letsencrypt-do
+      - traefik.http.routers.qbit.rule=Host(`qbit.${DOMAINNAME}`)
+      - traefik.http.routers.qbit.service=qbit-svc
+      - traefik.http.services.qbit-svc.loadbalancer.server.port=8008
+      # Sonarr
       - traefik.http.routers.sonarr.entrypoints=websecure
       - traefik.http.routers.sonarr.tls.certresolver=letsencrypt-do
       - traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAINNAME}`)
       - traefik.http.routers.sonarr.service=sonarr-svc
       - traefik.http.services.sonarr-svc.loadbalancer.server.port=8989
+      # Radarr
       - traefik.http.routers.radarr.entrypoints=websecure
       - traefik.http.routers.radarr.tls.certresolver=letsencrypt-do
       - traefik.http.routers.radarr.rule=Host(`radarr.${DOMAINNAME}`)
       - traefik.http.routers.radarr.service=radarr-svc
       - traefik.http.services.radarr-svc.loadbalancer.server.port=7878
+      # Bazarr
       - traefik.http.routers.bazarr.entrypoints=websecure
       - traefik.http.routers.bazarr.tls.certresolver=letsencrypt-do
       - traefik.http.routers.bazarr.rule=Host(`bazarr.${DOMAINNAME}`)
       - traefik.http.routers.bazarr.service=bazarr-svc
       - traefik.http.services.bazarr-svc.loadbalancer.server.port=6767
+      # Jackett
       - traefik.http.routers.jackett.entrypoints=websecure
       - traefik.http.routers.jackett.tls.certresolver=letsencrypt-do
       - traefik.http.routers.jackett.rule=Host(`jackett.${DOMAINNAME}`)
@@ -60,97 +76,83 @@ services:
     image: linuxserver/nzbget
     network_mode: service:gluetun
     environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
+    #  << : *default-env
     volumes:
       - ./nzbget:/config
       - ${DOWNLOAD_DIR}:/downloads
-      - ${TZ_VOL}
-    restart: unless-stopped
-
-  transmission:
-    image: linuxserver/transmission
-    network_mode: service:gluetun
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - USER=${TRANS_USER}
-      - PASS=${TRANS_PWD}
-    volumes:
-      - ./transmission:/config
-      - ${DOWNLOAD_DIR}:/downloads
-      - ${DOWNLOAD_DIR}/bt/watch:/watch
-      - ${TZ_VOL}
     restart: unless-stopped
 
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     network_mode: service:gluetun
     environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
+      << : *default-env
       - WEBUI_PORT=8008
     volumes:
       - ./qbittorrent:/config
       - ${DOWNLOAD_DIR}:/downloads
-      - ${TZ_VOL} 
+    restart: unless-stopped
+
+  transmission:
+    image: linuxserver/transmission
+    network_mode: service:gluetun
+    environment:
+      << : *default-env
+      - USER=${TRANS_USER}
+      - PASS=${TRANS_PWD}
+    volumes:
+      - ./transmission:/config
+      - ${DOWNLOAD_DIR}:/downloads
+      - ${DOWNLOAD_DIR}/bt/watch:/watch
     restart: unless-stopped
 
   jackett:
     image: lscr.io/linuxserver/jackett:latest
     network_mode: service:gluetun
     environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
+      << : *default-env
       - AUTO_UPDATE=true
     volumes:
       - ./jackett:/config
       - ${DOWNLOAD_DIR}:/downloads
-      - ${TZ_VOL}
     restart: unless-stopped
 
   radarr:
     image: linuxserver/radarr:latest
     network_mode: service:gluetun
     environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - UMASK_SET=022
-    volumes:
-      - ./sonarr:/config
-      - ${VIDEO_DIR}:/videos
-      - ${VIDEO_DIR2}:/videos2
-      - ${DOWNLOAD_DIR}:/downloads
-      - ${TZ_VOL}
-    restart: unless-stopped
-
-  sonarr:
-    image: linuxserver/sonarr:latest
-    network_mode: service:gluetun
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
+      << : *default-env
       - UMASK_SET=022
     volumes:
       - ./radarr:/config
       - ${VIDEO_DIR}:/videos
       - ${VIDEO_DIR2}:/videos2
       - ${DOWNLOAD_DIR}:/downloads
-      - ${TZ_VOL}
+    restart: unless-stopped
+
+  sonarr:
+    image: linuxserver/sonarr:latest
+    network_mode: service:gluetun
+    environment:
+      << : *default-env
+      - UMASK_SET=022
+    volumes:
+      - ./sonarr:/config
+      - ${VIDEO_DIR}:/videos
+      - ${VIDEO_DIR2}:/videos2
+      - ${DOWNLOAD_DIR}:/downloads
     restart: unless-stopped
 
   bazarr:
     image: ghcr.io/linuxserver/bazarr:latest
     network_mode: service:gluetun
     environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
+      << : *default-env
       - UMASK_SET=022
     volumes:
       - ./bazarr:/config
       - ${VIDEO_DIR}:/videos
       - ${VIDEO_DIR2}:/videos2
-      - ${TZ_VOL}
     restart: unless-stopped
 
   overseerr:
