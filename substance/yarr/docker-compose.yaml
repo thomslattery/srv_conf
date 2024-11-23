@@ -156,6 +156,15 @@ services:
       - ${TZ_VOL}
     restart: unless-stopped
 
+  overseerr:
+    image: sctx/overseerr:latest
+    network_mode: service:gluetun
+    environment:
+      << : *default-env
+      - LOG_LEVEL=debug
+    volumes:
+      - ./overseerr:/app/config
+    restart: unless-stopped
 
 networks:
   web-proxy:
