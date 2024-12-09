@@ -6,10 +6,10 @@ services:
       - web-proxy
     volumes:
       - ./config:/app/config # Make sure your local config directory exists
-      - /var/run/docker.sock:/var/run/docker.sock # (optional) For docker integrations, see alternative methods
     environment:
-      PUID: $PUID
-      PGID: $PGID
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
     labels:
       - traefik.enable=true
       ## HTTPS Routers
@@ -19,6 +19,7 @@ services:
       - traefik.http.routers.home.tls.certresolver=letsencrypt-do
       - traefik.http.routers.home.service=home-svc
       - traefik.http.services.home-svc.loadbalancer.server.port=3000
+    restart: unless-stopped
 
 
 networks:
