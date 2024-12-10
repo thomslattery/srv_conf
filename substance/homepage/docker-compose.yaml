@@ -3,7 +3,7 @@ services:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
     networks:
-      - web-proxy
+      - webproxy
     volumes:
       - ./config:/app/config # Make sure your local config directory exists
     environment:
@@ -23,5 +23,5 @@ services:
 
 
 networks:
-  web-proxy:
+  webproxy:
     external: true
