@@ -46,9 +46,6 @@ services:
       - --certificatesresolvers.letsencrypt-do.acme.dnschallenge.delaybeforecheck=0
       - --certificatesresolvers.letsencrypt-do.acme.email=${EMAIL}
       - --certificatesresolvers.letsencrypt-do.acme.storage=/letsencrypt/acme.json
-    dns:
-      - "192.168.9.9"
-      - "192.168.9.254"
     ports:
       - "80:80"
       - "443:443"
