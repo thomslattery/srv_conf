@@ -7,7 +7,7 @@ x-environment: &default-env
 # Common keys
 x-common-keys: &default-keys
   networks:
-    - web-proxy
+    - webproxy
   security_opt:
     - no-new-privileges:true
   restart: unless-stopped
@@ -33,7 +33,7 @@ services:
       # Docker connectivity
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=web-proxy
+      - --providers.docker.network=webproxy
       # Entrypoints - 80,443
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
@@ -103,6 +103,6 @@ services:
 
 
 networks:
-  web-proxy:
+  webproxy:
     external: true
 
