@@ -12,6 +12,10 @@ x-common-keys: &default-keys
     - no-new-privileges:true
   restart: unless-stopped
 
+secrets:
+  do_auth_token:
+    file: ${SECRETS_DIR}/do_auth_token
+
 # Web Proxy Docker Containers
 services:
   traefik:
@@ -48,9 +52,11 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    secrets:
+      - "do_auth_token"
     environment:
       << : *default-env
-      DO_AUTH_TOKEN: $DO_AUTH_TOKEN
+      DO_AUTH_TOKEN_FILE: /run/secrets/do_auth_token
     labels:
       - traefik.enable=true
       # HTTP-to-HTTPS Redirect
