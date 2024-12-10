@@ -69,6 +69,7 @@ services:
       ## Services - API
       - traefik.http.routers.traefik-secure.service=api@internal
       - traefik.http.routers.traefik-secure.middlewares=traefik-auth
+      # - traefik.http.middlewares.traefik-auth.basicauth.usersfile=${SECRETS_DIR}/webproxy_auth
       - traefik.http.middlewares.traefik-auth.basicauth.users=${BASIC_AUTH}
     volumes:
       - ./traefik/traefik.log:/traefik.log 
