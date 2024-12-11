@@ -19,7 +19,51 @@ secrets:
     file: ${SECRETS_DIR}/nextcloud_redis
 
 services:
-  mariadb:
+  app:
+    << : *default-keys
+    image: nextcloud:29
+    networks:
+      - webproxy
+      - backend
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./app/html:/var/www/html
+      - ./app/config:/var/www/html/config
+      - ./app/custom_apps:/var/www/html/custom_apps
+      - ./app/themes:/var/www/html/themes
+      - ${DATA}:/data/nextcloud
+    secrets:
+      - db_password
+      - redis_password
+    environment:
+      << : *default-env
+      REDIS_HOST: redis
+      REDIS_HOST_PASSWORD_FILE: /run/secrets/redis_password
+      MYSQL_HOST: db
+      MYSQL_USER: nextcloud
+      MYSQL_DATABASE: nextcloud
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password
+      NEXTCLOUD_DATA_DIR: /data/nextcloud
+      NEXTCLOUD_TRUSTED_DOMAIN: cloud.${DOMAINNAME}
+      TRUSTED_PROXIES: ${NETWORK}
+    labels:
+      - traefik.enable=true
+      ## HTTPS Routers
+      - traefik.http.routers.nextcloud.rule=Host(`cloud.${DOMAINNAME}`)
+      - traefik.http.routers.nextcloud.entrypoints=websecure
+      - traefik.http.routers.nextcloud.tls=true
+      - traefik.http.routers.nextcloud.tls.certresolver=letsencrypt-do
+      ## Middlewares for Nextcloud rewrites and headers
+      - "traefik.http.middlewares.nc-rep.redirectregex.regex=https://(.*)/.well-known/(card|cal)dav"
+      - "traefik.http.middlewares.nc-rep.redirectregex.replacement=https://$$1/remote.php/dav/"
+      - "traefik.http.middlewares.nc-rep.redirectregex.permanent=true"
+      - "traefik.http.middlewares.nc-header.headers.customFrameOptionsValue=SAMEORIGIN"
+      - "traefik.http.middlewares.nc-header.headers.customResponseHeaders.Strict-Transport-Security=15552000"
+      - "traefik.http.routers.nextcloud.middlewares=nc-rep,nc-header"
+
+  db:
     << : *default-keys
     image: mariadb:11
     networks:
@@ -44,50 +88,8 @@ services:
       - backend
     environment:
       << : *default-env
-    command: redis-server --requirepass $REDIS_PASSWORD
+    command: redis-server --requirepass ${REDIS_PASSWORD}
 
-  nextcloud:
-    << : *default-keys
-    image: nextcloud:28
-    networks:
-      - web-proxy
-      - backend
-    depends_on:
-      - mariadb
-      - redis
-    volumes:
-      - $BASE_DIR/app/html:/var/www/html
-      - $BASE_DIR/app/config:/var/www/html/config
-      - $BASE_DIR/app/custom_apps:/var/www/html/custom_apps
-      - $BASE_DIR/app/themes:/var/www/html/themes
-      - $NEXTCLOUD_DATA:/data/nextcloud
-    secrets:
-      - db_password
-    environment:
-      << : *default-env
-      REDIS_HOST: redis
-      REDIS_HOST_PASSWORD: $REDIS_PASSWORD
-      MYSQL_HOST: mariadb
-      MYSQL_USER: nextcloud
-      MYSQL_DATABASE: nextcloud
-      MYSQL_PASSWORD_FILE: /run/secrets/db_password
-      NEXTCLOUD_DATA_DIR: /data/nextcloud
-      NEXTCLOUD_TRUSTED_DOMAIN: cloud.$DOMAINNAME
-      TRUSTED_PROXIES: $NETWORK
-    labels:
-      - traefik.enable=true
-      ## HTTPS Routers
-      - traefik.http.routers.nextcloud.rule=Host(`cloud.${DOMAINNAME}`)
-      - traefik.http.routers.nextcloud.entrypoints=websecure
-      - traefik.http.routers.nextcloud.tls=true
-      - traefik.http.routers.nextcloud.tls.certresolver=letsencrypt-do
-      ## Middlewares for Nextcloud rewrites and headers
-      - "traefik.http.middlewares.nc-rep.redirectregex.regex=https://(.*)/.well-known/(card|cal)dav"
-      - "traefik.http.middlewares.nc-rep.redirectregex.replacement=https://$$1/remote.php/dav/"
-      - "traefik.http.middlewares.nc-rep.redirectregex.permanent=true"
-      - "traefik.http.middlewares.nc-header.headers.customFrameOptionsValue=SAMEORIGIN"
-      - "traefik.http.middlewares.nc-header.headers.customResponseHeaders.Strict-Transport-Security=15552000"
-      - "traefik.http.routers.nextcloud.middlewares=nc-rep,nc-header"
 
 networks:
   backend:
