@@ -1,12 +1,10 @@
 services:
+
   wings:
     image: ghcr.io/pterodactyl/wings:latest
     networks:
       - wings0
-      - web-proxy
-    dns:
-      - 192.168.9.9
-      - 192.168.9.254
+      - webproxy
     ports:
       - "2022:2022"
     tty: true
@@ -37,6 +35,7 @@ services:
      - traefik.http.services.pterodactyl-svc.loadbalancer.server.port=443
     restart: unless-stopped
 
+
 networks:
 
   wings0:
@@ -50,5 +49,5 @@ networks:
     driver_opts:
       com.docker.network.bridge.name: wings0
 
-  web-proxy:
+  webproxy:
     external: true
