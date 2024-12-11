@@ -1,8 +1,8 @@
 # Common environment values
 x-environment: &default-env
-  TZ: $TZ
-  PUID: $PUID
-  PGID: $PGID
+  TZ: ${TZ}
+  PUID: ${PUID}
+  PGID: ${PGID}
 
 # Common keys
 x-common-keys: &default-keys
@@ -12,9 +12,11 @@ x-common-keys: &default-keys
 
 secrets:
   db_password:
-    file: $SECRETS_DIR/db_password
+    file: ${SECRETS_DIR}/nextcloud_db_user
   db_root_password:
-    file: $SECRETS_DIR/db_root_password
+    file: ${SECRETS_DIR}/nextcloud_db_root
+  redis_password:
+    file: ${SECRETS_DIR}/nextcloud_redis
 
 services:
   mariadb:
@@ -23,7 +25,7 @@ services:
     networks:
       - backend
     volumes:
-      - $BASE_DIR/db:/var/lib/mysql
+      - ./db:/var/lib/mysql
     secrets:
       - db_root_password
       - db_password
@@ -94,6 +96,5 @@ networks:
         - subnet: 10.9.10.0/24
           gateway: 10.9.10.1
 
-  web-proxy:
+  webproxy:
     external: true
-
