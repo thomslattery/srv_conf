@@ -3,25 +3,23 @@ services:
   app:
     networks:
       - backend
-      - web-proxy
-    dns:
-      - 192.168.9.9
-      - 192.168.9.254
+      - webproxy
     restart: unless-stopped
     image: bbilly1/tubearchivist
     volumes:
-      - /mnt/Media/Videos/Web/youtube:/youtube
+      - ${MEDIA_DIR}/Videos/Web/youtube:/youtube
       - ./cache:/cache
     environment:
-      - ES_URL=http://es:9200     # needs protocol e.g. http and port
-      - REDIS_HOST=redis          # don't add protocol
-      - HOST_UID=1000
-      - HOST_GID=1000
-      - TA_HOST=tube.neverhood.space         # set your host name
-      - TA_USERNAME=tube           # your initial TA credentials
-      - TA_PASSWORD=verysecret              # your initial TA credentials
-      - ELASTIC_PASSWORD=$ES_PASSWORD         # set password for Elasticsearch
-      - TZ:$TZ                 # set your time zone
+      - ES_URL=http://es:9200
+      - REDIS_HOST=redis
+      - HOST_UID=${PUID}
+      - HOST_GID=${PGID}
+      - TA_HOST=tube.${DOMAINNAME}
+      - TA_USERNAME=${TA_USER}
+      - TA_PASSWORD=${TA_PASSWORD}
+      - ELASTIC_PASSWORD=${ES_PASSWORD}
+      - ENABLE_CAST=true
+      - TZ:${TZ}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 2m
@@ -51,17 +49,17 @@ services:
     depends_on:
       - es
     environment:
-      - TZ:$TZ
+      - TZ:${TZ}
 
   es:
-    image: bbilly1/tubearchivist-es         # only for amd64, or use official es 8.13.2
+    image: bbilly1/tubearchivist-es
     networks:
       - backend
     expose:
       - "9200"
     restart: unless-stopped
     environment:
-      - ELASTIC_PASSWORD=$ES_PASSWORD       # matching Elasticsearch password
+      - ELASTIC_PASSWORD=${ES_PASSWORD}
       - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - "xpack.security.enabled=true"
       - "discovery.type=single-node"
@@ -72,10 +70,10 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - ./es:/usr/share/elasticsearch/data    # check for permission error when using bind mount, see readme
+      - ./es:/usr/share/elasticsearch/data
 
 networks:
   backend:
-  web-proxy:
+  webproxy:
     external: true
 
