@@ -1,18 +1,20 @@
-version: "3.7"
-
 # Common environment values
 x-environment: &default-env
-  TZ: $TZ
-  PUID: $PUID
-  PGID: $PGID
+  PUID: ${PUID}
+  PGID: ${PGID}
+  TZ: ${TZ}
 
 # Common keys
 x-common-keys: &default-keys
   networks:
-    - web-proxy
+    - webproxy
   security_opt:
     - no-new-privileges:true
   restart: unless-stopped
+
+secrets:
+  do_auth_token:
+    file: ${SECRETS_DIR}/do_auth_token
 
 # Web Proxy Docker Containers
 services:
@@ -31,7 +33,7 @@ services:
       # Docker connectivity
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
-      - --providers.docker.network=web-proxy
+      - --providers.docker.network=webproxy
       # Entrypoints - 80,443
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
@@ -47,9 +49,11 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    secrets:
+      - "do_auth_token"
     environment:
       << : *default-env
-      DO_AUTH_TOKEN: $DO_AUTH_TOKEN
+      DO_AUTH_TOKEN_FILE: /run/secrets/do_auth_token
     labels:
       - traefik.enable=true
       # HTTP-to-HTTPS Redirect
@@ -65,12 +69,13 @@ services:
       ## Services - API
       - traefik.http.routers.traefik-secure.service=api@internal
       - traefik.http.routers.traefik-secure.middlewares=traefik-auth
+      # - traefik.http.middlewares.traefik-auth.basicauth.usersfile=${SECRETS_DIR}/webproxy_auth
       - traefik.http.middlewares.traefik-auth.basicauth.users=${BASIC_AUTH}
     volumes:
-      - $DOCKER_DIR/traefik/traefik.log:/traefik.log 
-      - $DOCKER_DIR/letsencrypt:/letsencrypt
+      - ./traefik/traefik.log:/traefik.log 
+      - ./letsencrypt:/letsencrypt
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - $TZ_MOUNT
+      - ${TZ_VOL}
 
   whoami:
     << : *default-keys
@@ -83,19 +88,19 @@ services:
       - traefik.http.routers.whoami.tls=true
       - traefik.http.routers.whoami.tls.certresolver=letsencrypt-do
 
-  nginx-demo:
+  web:
     << : *default-keys
     image: nginx
-    container_name: nginx-demo
+    container_name: web
     labels:
       - traefik.enable=true
-      - traefik.http.routers.web-demo.rule=Host(`web.${DOMAINNAME}`)
-      - traefik.http.routers.web-demo.entrypoints=websecure
-      - traefik.http.routers.web-demo.tls=true
-      - traefik.http.routers.web-demo.tls.certresolver=letsencrypt-do
+      - traefik.http.routers.web.rule=Host(`web.${DOMAINNAME}`)
+      - traefik.http.routers.web.entrypoints=websecure
+      - traefik.http.routers.web.tls=true
+      - traefik.http.routers.web.tls.certresolver=letsencrypt-do
 
 
 networks:
-  web-proxy:
+  webproxy:
     external: true
 

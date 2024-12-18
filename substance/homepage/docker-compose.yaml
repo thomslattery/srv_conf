@@ -1,0 +1,27 @@
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    networks:
+      - webproxy
+    volumes:
+      - ./config:/app/config # Make sure your local config directory exists
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+    labels:
+      - traefik.enable=true
+      ## HTTPS Routers
+      - traefik.http.routers.home.rule=Host(`home.${DOMAINNAME}`)
+      - traefik.http.routers.home.entrypoints=websecure
+      - traefik.http.routers.home.tls=true
+      - traefik.http.routers.home.tls.certresolver=letsencrypt-do
+      - traefik.http.routers.home.service=home-svc
+      - traefik.http.services.home-svc.loadbalancer.server.port=3000
+    restart: unless-stopped
+
+
+networks:
+  webproxy:
+    external: true

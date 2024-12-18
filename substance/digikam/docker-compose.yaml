@@ -1,10 +1,8 @@
-version: '3.1'
-
 # Common environment values
 x-environment: &default-env
-  TZ: $TZ
-  PUID: $PUID
-  PGID: $PGID
+  TZ: ${TZ}
+  PUID: ${PUID}
+  PGID: ${PGID}
 
 # Common keys
 x-common-keys: &default-keys
@@ -14,9 +12,9 @@ x-common-keys: &default-keys
 
 secrets:
   db_root_password:
-    file: $SECRETS_DIR/digikam_db_root
+    file: ${SECRETS_DIR}/digikam_db_root
   db_user_password:
-    file: $SECRETS_DIR/digikam_db_user
+    file: ${SECRETS_DIR}/digikam_db_user
 
 services:
   db:
