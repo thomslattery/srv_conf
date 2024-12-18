@@ -4,21 +4,33 @@ x-environment: &default-env
   - PGID=${PGID}
   - TZ=${TZ}
 
+secrets:
+  pia_user:
+    file: ${SECRETS_DIR}/yarr_pia_user
+  pia_password:
+    file: ${SECRETS_DIR}/yarr_pia_pass
+  transmission_user:
+    file: ${SECRETS_DIR}/yarr_trans_user
+  transmission_password:
+    file: ${SECRETS_DIR}/yarr_trans_pass
+
 # YARR! Service Ahoy!
 services:
-
   gluetun:
     image: qmcgaw/gluetun
     cap_add:
       - NET_ADMIN
     networks:
-      - web-proxy
+      - webproxy
     ports:
       - 9091:9091/tcp # transmission
+    secrets:
+      - pia_user
+      - pia_password
     environment:
       - VPN_SERVICE_PROVIDER=private internet access
-      - OPENVPN_USER=${PIA_USER}
-      - OPENVPN_PASSWORD=${PIA_PWD}
+      - OPENVPN_USER_SECRETFILE=/run/secrets/pia_user
+      - OPENVPN_PASSWORD_SECRETFILE=/run/secrets/pia_password
       - SERVER_REGION=${PIA_REGION}
       - VPN_PORT_FORWARDING=on
       - VPN_PORT_FORWARDING_STATUS_FILE=/gluetun/forwarded_port
@@ -76,7 +88,9 @@ services:
     image: linuxserver/nzbget
     network_mode: service:gluetun
     environment:
-    #  << : *default-env
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
     volumes:
       - ./nzbget:/config
       - ${DOWNLOAD_DIR}:/downloads
@@ -86,7 +100,9 @@ services:
     image: lscr.io/linuxserver/qbittorrent:latest
     network_mode: service:gluetun
     environment:
-      << : *default-env
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
       - WEBUI_PORT=8008
     volumes:
       - ./qbittorrent:/config
@@ -96,10 +112,15 @@ services:
   transmission:
     image: linuxserver/transmission
     network_mode: service:gluetun
+    secrets:
+      - transmission_user
+      - transmission_password
     environment:
-      << : *default-env
-      - USER=${TRANS_USER}
-      - PASS=${TRANS_PWD}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - FILE__USER=/run/secrets/transmission_user
+      - FILE__PASS=/run/secrets/transmission_password
     volumes:
       - ./transmission:/config
       - ${DOWNLOAD_DIR}:/downloads
@@ -110,7 +131,9 @@ services:
     image: lscr.io/linuxserver/jackett:latest
     network_mode: service:gluetun
     environment:
-      << : *default-env
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
       - AUTO_UPDATE=true
     volumes:
       - ./jackett:/config
@@ -121,7 +144,9 @@ services:
     image: linuxserver/radarr:latest
     network_mode: service:gluetun
     environment:
-      << : *default-env
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
       - UMASK_SET=022
     volumes:
       - ./radarr:/config
@@ -134,7 +159,9 @@ services:
     image: linuxserver/sonarr:latest
     network_mode: service:gluetun
     environment:
-      << : *default-env
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
       - UMASK_SET=022
     volumes:
       - ./sonarr:/config
@@ -147,7 +174,9 @@ services:
     image: ghcr.io/linuxserver/bazarr:latest
     network_mode: service:gluetun
     environment:
-      << : *default-env
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
       - UMASK_SET=022
     volumes:
       - ./bazarr:/config
@@ -159,13 +188,15 @@ services:
     image: sctx/overseerr:latest
     network_mode: service:gluetun
     environment:
-      << : *default-env
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
       - LOG_LEVEL=debug
     volumes:
       - ./overseerr:/app/config
     restart: unless-stopped
 
 networks:
-  web-proxy:
+  webproxy:
     external: true
 
